@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
+    <script>
+        var IMP = window.IMP;
+        IMP.init("imp32123581");
+
+        function requestPay() {
+            var userId = 2;
+
+            $.ajax({
+                type: "GET",
+                url: "http://localhost:8080/cart/find/" + userId,
+                success: function (orders) {
+                    if (orders && orders.length > 0) {
+                        var order = orders[0];
+                        var amount = order.price;
+                        var name = order.getFindHouseDtoResList[0].name;
+                        var email = order.email;
+                        var cartId = order.id;
+
+                        IMP.request_pay({
+                            pg: 'kakaopay.TC0ONETIME',
+                            pay_method: 'card',
+                            merchant_uid: "IMP" + new Date().getTime(),
+                            name: name,
+                            amount: amount,
+                            buyer_email: email,
+                            buyer_name: '구매자',
+                            buyer_tel: '010-1234-5678',
+                            buyer_addr: '서울특별시 강남구 삼성동',
+                            buyer_postcode: '123-456',
+                            display: {
+                                card_quota: [3]
+                            },
+                            custom_data: JSON.stringify({cartId: cartId, name: name, amount: amount, buyer_email: email})
+                        }, function (rsp) {
+                            // callback
+                            if (rsp.success) {
+                                saveOrderInfo(userId, amount, rsp.merchant_uid, rsp.imp_uid, rsp.status, cartId);
+                            } else {
+                                console.error(rsp);
+                            }
+                        });
+                    } else {
+                        console.error("Orders not found for user ID: " + userId);
+                    }
+                },
+                error: function (error) {
+                    console.error("Error retrieving orders information:", error);
+                }
+            });
+        }
+
+        function saveOrderInfo(userId, amount, merchantUid, impUid, paymentStatus, cartId) {
+            $.ajax({
+                type: "POST",
+                url: "http://localhost:8080/orders/create",
+                data: {
+                    cartId: cartId,
+                    impUid: impUid,
+                    amount: amount,
+                    merchantUid: merchantUid,
+                    paymentStatus: paymentStatus,
+                },
+                success: function (response) {
+                    console.log(response);
+                },
+                error: function (error) {
+                    console.error("Error saving order information:", error);
+                }
+            });
+        }
+    </script>
+    <meta charset="UTF-8">
+    <title>Sample Payment</title>
+</head>
+<body>
+<script>
+    $(document).ready(function () {
+        // Fetch order information
+        $.ajax({
+            type: "GET",
+            url: "http://localhost:8080/cart/find/2",
+            success: function (orders) {
+                displayOrders(orders);
+            },
+            error: function (error) {
+                console.error("Error retrieving order information:", error);
+            }
+        });
+
+        // Display order information
+        function displayOrders(orders) {
+            orders.forEach(function (order) {
+                var orderHtml = '<div>';
+                orderHtml += '<h3>주문 정보</h3>';
+                orderHtml += '<p>ID: ' + order.id + '</p>';
+                orderHtml += '<p>Email: ' + order.email + '</p>';
+                orderHtml += '<p>NickName: ' + order.nickName + '</p>';
+                orderHtml += '<p>Check-In: ' + order.checkIn + '</p>';
+                orderHtml += '<p>Check-Out: ' + order.checkOut + '</p>';
+                orderHtml += '<p>Price: ' + order.price + '</p>';
+
+                // 상품 정보
+                orderHtml += '<h4>상품 정보</h4>';
+                order.getFindHouseDtoResList.forEach(function (house) {
+                    orderHtml += '<p>House ID: ' + house.id + '</p>';
+                    orderHtml += '<p>Name: ' + house.name + '</p>';
+                    orderHtml += '<p>Content: ' + house.content + '</p>';
+                    orderHtml += '<p>Address: ' + house.address + '</p>';
+                    orderHtml += '<p>Price: ' + house.price + '</p>';
+
+                    // 이미지
+                    house.filenames.forEach(function (filename) {
+                        orderHtml += '<img src="' + filename + '" alt="House Image">';
+                    });
+                });
+
+                orderHtml += '</div><hr>';
+                $('body').append(orderHtml);
+            });
+        }
+    });
+</script>
+<button onclick="requestPay()">결제하기</button>
+</body>
+</html>
