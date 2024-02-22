@@ -6,7 +6,7 @@ spec:
   selector:
     matchLabels:
       type: campingontop
-  replicas: 2
+  replicas: 3
   strategy:
     type: RollingUpdate
   minReadySeconds: 10
