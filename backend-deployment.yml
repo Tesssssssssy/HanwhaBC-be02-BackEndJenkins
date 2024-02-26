@@ -28,13 +28,6 @@ spec:
             limits:
               memory: "3Gi"
               cpu: "2000m"
-          readinessProbe:
-            httpGet:
-              path: /house/list?page=1&size=36
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 60
-            successThreshold: 10
           envFrom:
             - configMapRef:
                 name: backend-config
